@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Any, Optional
+from collections import OrderedDict
 
 class LRUCache:
     """
@@ -13,16 +14,38 @@ class LRUCache:
 
     def __init__(self, item_limit: int):
         # TODO: implement this function
-        raise NotImplementedError()
+        self.item_limit = item_limit
+        self.cache = OrderedDict()
+    
+        #raise NotImplementedError()
 
     def has(self, key: str) -> bool:
         # TODO: implement this function
-        raise NotImplementedError()
+        if key in self.cache:
+            self.cache.move_to_end(key)
+            return True
+        return False
+        #raise NotImplementedError()
 
     def get(self, key: str) -> Optional[Any]:
         # TODO: implement this function
-        raise NotImplementedError()
+        if key not in self.cache:
+            return None
+        
+        self.cache.move_to_end(key)
+        return self.cache[key]
+        #raise NotImplementedError()
 
     def set(self, key: str, value: Any):
         # TODO: implement this function
-        raise NotImplementedError()
+        if key in self.cache:
+            self.cache[key] = value
+            self.cache.move_to_end(key)
+            return
+        #raise NotImplementedError()
+
+        if len(self.cache) >= self.item_limit:
+            self.cache.popitem(last=False)
+
+
+        self.cache[key] = value
