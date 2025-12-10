@@ -30,7 +30,6 @@ class LRUCache:
         return self.cache[key]
 
     def set(self, key: str, value: Any):
-        # TODO: implement this function
         if key in self.cache:
             self.cache[key] = value
             self.cache.move_to_end(key)
