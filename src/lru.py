@@ -46,6 +46,4 @@ class LRUCache:
 
         if len(self.cache) >= self.item_limit:
             self.cache.popitem(last=False)
-
-
         self.cache[key] = value

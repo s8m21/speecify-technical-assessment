@@ -55,7 +55,6 @@ def parseSSML(ssml: str) -> SSMLNode:
 
     while i < n:
         if ssml[i] == "<":
-
             if ssml.startswith("</", i):
                 j = ssml.find(">", i)
                 if j == -1:
@@ -66,49 +65,35 @@ def parseSSML(ssml: str) -> SSMLNode:
                 current = stack.pop()
                 if current.name != tag_name:
                     raise Exception("Mismatched closing tag")
-                
                 i = j + 1
                 continue
-            
             j = ssml.find(">", i)
             if j == -1:
                 raise Exception("Missing >")
             tag_contents = ssml[i+1:j].strip()
             if not tag_contents:
                 raise Exception("Empty tag")
-
             self_closing = tag_contents.endswith("/")
             if self_closing:
                 tag_contents = tag_contents[:-1].rstrip()
-
-
             k = 0
-            while k < len(tag_contents) and not  tag_contents[k].isspace():
+            while k < len(tag_contents) and not tag_contents[k].isspace():
                 k += 1
             tag_name = tag_contents[:k]
             attrs_str = tag_contents[k:].strip()
-
             if not found_top:
                 if tag_name != "speak":
                     raise Exception("Missing top-level <speak>")
                 found_top = True
-
             if tag_name == "speak" and len(stack) > 1 and stack[-1].name == "root":
                 raise Exception("Multiple top-level tags")
-            
-            if len(stack) == 1 and len(root.children) >= 1:
-                raise Exception("Multi-top level elements are not allowed")
-
             attrs = {}
             pos = 0
             while pos < len(attrs_str):
-
                 while pos < len(attrs_str) and attrs_str[pos].isspace():
                     pos += 1
                 if pos >= len(attrs_str):
                     break
-
-
                 start = pos
                 while (
                     pos < len(attrs_str)
@@ -116,26 +101,23 @@ def parseSSML(ssml: str) -> SSMLNode:
                     and attrs_str[pos] != "="
                 ):
                     pos += 1
-
                 name = attrs_str[start:pos]
                 if not name:
                     raise Exception("Invalid attribute name")
-                
+                # Allow colon in attribute names
                 for ch in name:
-                    if not (ch.isalnum() or ch == "_"):
+                    if not (ch.isalnum() or ch == "_" or ch == ":"):
                         raise Exception("Invalid attribute name")
-
                 while pos < len(attrs_str) and attrs_str[pos].isspace():
                     pos += 1
                 if pos >= len(attrs_str) or attrs_str[pos] != "=":
                     raise Exception("Missing = in attribute")
                 pos += 1
-
                 while pos < len(attrs_str) and attrs_str[pos].isspace():
                     pos += 1
-                if pos >= len(attrs_str) or attrs_str[pos] not in ("'", '"'):
+                # Only allow double quotes for attribute values
+                if pos >= len(attrs_str) or attrs_str[pos] != '"':
                     raise Exception("Attribute value must be double-quoted")
-    
                 quote = attrs_str[pos]
                 pos += 1
                 val_start = pos
@@ -143,30 +125,22 @@ def parseSSML(ssml: str) -> SSMLNode:
                     pos += 1
                 if pos >= len(attrs_str):
                     raise Exception("Unterminated attribute value")
-            
                 value = attrs_str[val_start:pos]
                 pos += 1
-
                 attrs[name] = value
-
             tag = SSMLTag(tag_name, attrs, [])
             stack[-1].children.append(tag)
-
             if not self_closing:
                 stack.append(tag)
-            
             i = j + 1
-
         else:
-            
             j = ssml.find("<", i)
             if j == -1:
                 j = n
             text = ssml[i:j]
-
             if text.strip():
-                stack[-1].children.append(SSMLText(text))
-                
+                # Unescape XML chars here
+                stack[-1].children.append(SSMLText(unescapeXMLChars(text)))
             i = j
     
     if len(stack) != 1:
@@ -182,14 +156,13 @@ def ssmlNodeToText(node: SSMLNode) -> str:
     # TODO: implement this function
 
     if isinstance(node, SSMLText):
-        return unescapeXMLChars(node.text)
-    
-
-    out = []
-    for child in node.children:
-        out.append(ssmlNodeToText(child))
-    return "".join(out)
-   # raise NotImplementedError()
+        return escapeXMLChars(node.text)
+    # Compose tag with attributes
+    attrs = ""
+    if node.attributes:
+        attrs = " " + " ".join(f'{k}="{v}"' for k, v in node.attributes.items())
+    children = "".join(ssmlNodeToText(child) for child in node.children)
+    return f"<{node.name}{attrs}>{children}</{node.name}>"
 
 
 def unescapeXMLChars(text: str) -> str:
