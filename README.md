@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Speechify Python Functional Test
 
 ## Project Overview
